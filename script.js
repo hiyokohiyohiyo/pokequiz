@@ -108,7 +108,7 @@ function nextQuestion() {
 
 /* 終了 */
 function finishQuiz() {
-  if (!confirm("終了して採点しますか？")) return;
+  if (!confirm("終了して採点する？")) return;
 
   isFinished = true;
   showResult();
