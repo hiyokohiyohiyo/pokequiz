@@ -80,6 +80,10 @@ button {
 .correct { background: green; color: white; }
 .wrong { background: red; color: white; }
 .unanswered { background: white; }
+.marked {
+  background: #4da6ff !important;
+  color: white;
+}
 
 /* スマホ対応 */
 @media (max-width: 600px) {

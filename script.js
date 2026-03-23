@@ -64,7 +64,8 @@ function startQuiz(region) {
 
   answers = new Array(currentQuiz.length).fill(null).map(() => ({
     result: null,
-    input: ""
+    input: "",
+    marked: false
   }));
   currentIndex = 0;
   isFinished = false;
@@ -111,6 +112,8 @@ function renderQuestion() {
 
     input.focus();
     resultBox.style.display = "none";
+
+    updateMarkButton();
   }
 }
 
@@ -152,6 +155,25 @@ function finishQuiz() {
   document.getElementById("restart-btn").style.display = "block";
 }
 
+function toggleMark() {
+  if (!answers[currentIndex]) return;
+
+  answers[currentIndex].marked = !answers[currentIndex].marked;
+
+  updateMarkButton();
+  renderNav();
+}
+
+function updateMarkButton() {
+  const btn = document.getElementById("mark-btn");
+
+  if (answers[currentIndex]?.marked) {
+    btn.textContent = "マーキング中";
+  } else {
+    btn.textContent = "マーキング";
+  }
+}
+
 /* ナビ */
 function renderNav() {
   const nav = document.getElementById("question-nav");
@@ -161,7 +183,10 @@ function renderNav() {
     const btn = document.createElement("button");
     btn.innerText = i + 1;
 
-    if (isFinished) {
+    // 🔥 マーク優先
+    if (ans.marked) {
+      btn.classList.add("marked");
+    } else if (isFinished) {
       if (ans.result === true) btn.classList.add("correct");
       else btn.classList.add("wrong");
     } else {
