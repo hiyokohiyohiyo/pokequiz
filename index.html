@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ポケモンクイズ</title>
+  <title>ポケクイズ</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<h1>ポケモンクイズ</h1>
+<h1>ポケクイズ</h1>
 
-<div id="loading">読み込み中...（初回は時間がかかります）</div>
+<div id="loading">読み込み中...（最初は時間かかるよ～；；）</div>
 
 <div id="region-select">
   <button onclick="startQuiz('kanto')">カントー</button>
@@ -33,11 +33,11 @@
   <button onclick="nextQuestion()">スキップ</button>
 
   <button id="retry-wrong-btn" style="display:none;" onclick="retryWrong()">
-    間違えた問題だけリトライ
+    間違いだけリトライ
   </button>
 
   <button id="restart-btn" style="display:none;" onclick="restartQuiz()">
-    最初からやり直し
+    リトライ
   </button>
 </div>
 
