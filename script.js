@@ -12,7 +12,6 @@ const regions = {
 
 let quizData = {};
 let currentQuiz = [];
-let originalQuiz = [];
 let currentIndex = 0;
 let answers = [];
 let currentRegion = "";
@@ -59,14 +58,14 @@ async function loadPokemonRange(start, end) {
 /* 開始 */
 function startQuiz(region) {
   currentRegion = region;
-  originalQuiz = [...quizData[region]];
-  currentQuiz = [...originalQuiz].sort(() => Math.random() - 0.5);
+  currentQuiz = [...quizData[region]].sort(() => Math.random() - 0.5);
 
   answers = new Array(currentQuiz.length).fill(null).map(() => ({
     result: null,
     input: "",
     marked: false
   }));
+
   currentIndex = 0;
   isFinished = false;
 
@@ -80,98 +79,102 @@ function startQuiz(region) {
 /* 表示 */
 function renderQuestion() {
   const data = currentQuiz[currentIndex];
-  const input = document.getElementById("answer");
-  const resultBox = document.getElementById("answer-result");
+  const saved = answers[currentIndex];
 
   document.getElementById("pokemon-image").src = data.image;
 
-  const saved = answers[currentIndex];
+  const input = document.getElementById("answer");
+  const resultBox = document.getElementById("answer-result");
+
+  input.value = saved.input || "";
 
   if (isFinished) {
-    // ===== 終了後 =====
     input.style.display = "none";
-
-    const user = saved?.input || "（未回答）";
-    const correct = data.name;
-    const isCorrect = saved?.result;
 
     resultBox.style.display = "block";
     resultBox.innerHTML = `
-      <p><b>あなたの回答：</b> ${user}</p>
-      <p><b>正解：</b> ${correct}</p>
-      <p style="color:${isCorrect ? 'green' : 'red'};">
-        ${isCorrect ? "正解！" : "不正解"}
-      </p>
+      あなたの回答: ${saved.input || "未回答"}<br>
+      正解: ${data.name}<br>
+      ${saved.result ? "⭕ 正解" : "❌ 不正解"}
     `;
   } else {
-    // ===== 回答中 =====
     input.style.display = "inline-block";
-
-    // 🔥 入力復元（ここが重要）
-    input.value = saved?.input || "";
-
-    input.focus();
     resultBox.style.display = "none";
-
-    updateMarkButton();
+    input.focus();
   }
+
+  updateMarkButton();
 }
 
 /* 回答 */
 function submitAnswer() {
   if (isFinished) return;
 
-  const input = document.getElementById("answer").value.trim();
+  const input = document.getElementById("answer").value;
   const correct = currentQuiz[currentIndex].name;
 
-  answers[currentIndex] = {
-    result: input === "" ? null : input === correct,
-    input: input
-  };
+  answers[currentIndex].input = input;
+  answers[currentIndex].result =
+    input === "" ? null : (input === correct);
 
   renderNav();
   nextQuestion();
 }
 
-/* 次 */
+/* 入力時リアルタイム更新（バグ修正の核🔥） */
+document.addEventListener("DOMContentLoaded", () => {
+  init();
+
+  const input = document.getElementById("answer");
+
+  input.addEventListener("input", e => {
+    const val = e.target.value;
+    const correct = currentQuiz[currentIndex]?.name;
+
+    if (!answers[currentIndex]) return;
+
+    answers[currentIndex].input = val;
+    answers[currentIndex].result =
+      val === "" ? null : (val === correct);
+
+    renderNav();
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitAnswer();
+    }
+  });
+});
+
+/* 移動 */
 function nextQuestion() {
   if (currentIndex < currentQuiz.length - 1) {
     currentIndex++;
     renderQuestion();
-  } else {
-    finishQuiz();
   }
 }
 
-/* 終了 */
-function finishQuiz() {
-  if (!confirm("終了して採点する？")) return;
-
-  isFinished = true;
-  showResult();
-  renderNav();
-
-  document.getElementById("retry-wrong-btn").style.display = "block";
-  document.getElementById("restart-btn").style.display = "block";
+function prevQuestion() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderQuestion();
+  }
 }
 
+/* マーク */
 function toggleMark() {
-  if (!answers[currentIndex]) return;
-
   answers[currentIndex].marked = !answers[currentIndex].marked;
-
   updateMarkButton();
   renderNav();
 }
 
 function updateMarkButton() {
   const btn = document.getElementById("mark-btn");
-
-  if (answers[currentIndex]?.marked) {
-    btn.textContent = "マーキング中";
-  } else {
-    btn.textContent = "マーキング";
-  }
+  btn.textContent = answers[currentIndex].marked
+    ? "マーキング中"
+    : "マーキング";
 }
 
 /* ナビ */
@@ -183,15 +186,19 @@ function renderNav() {
     const btn = document.createElement("button");
     btn.innerText = i + 1;
 
-    // 🔥 マーク優先
     if (ans.marked) {
       btn.classList.add("marked");
     } else if (isFinished) {
+      // 採点後
       if (ans.result === true) btn.classList.add("correct");
       else btn.classList.add("wrong");
     } else {
-      if (ans.result === null) btn.classList.add("unanswered");
-      else btn.classList.add("correct");
+      // 回答中
+      if (!ans.input) {
+        btn.classList.add("unanswered"); // 白
+      } else {
+        btn.classList.add("answered"); // 入力済み（新規）
+      }
     }
 
     btn.onclick = () => {
@@ -203,9 +210,33 @@ function renderNav() {
   });
 }
 
+/* 終了 */
+function finishQuiz() {
+  if (!confirm("終了して採点する？")) return;
+
+  // 🔥 全問題をここで判定
+  answers.forEach((ans, i) => {
+    const correct = currentQuiz[i].name;
+
+    if (ans.input === "") {
+      ans.result = null;
+    } else {
+      ans.result = (ans.input === correct);
+    }
+  });
+
+  isFinished = true;
+
+  renderNav();
+  showResult();
+
+  document.getElementById("retry-wrong-btn").style.display = "block";
+  document.getElementById("restart-btn").style.display = "block";
+}
+
 /* 結果 */
 function showResult() {
-  const correct = answers.filter(a => a.result === true).length;
+  const correct = answers.filter(a => a.result).length;
   const rate = Math.round((correct / answers.length) * 100);
 
   document.getElementById("result").innerText =
@@ -214,15 +245,23 @@ function showResult() {
 
 /* リトライ */
 function retryWrong() {
-  const wrong = currentQuiz.filter((_, i) => answers[i].result !== true);
+  const wrongIndexes = answers
+    .map((a, i) => (a.result !== true ? i : -1))
+    .filter(i => i !== -1);
 
-  if (wrong.length === 0) {
-    alert("全問正解してるよ～！");
+  if (wrongIndexes.length === 0) {
+    alert("全問正解！");
     return;
   }
 
-  currentQuiz = [...wrong].sort(() => Math.random() - 0.5);
-  answers = new Array(currentQuiz.length).fill(null);
+  currentQuiz = wrongIndexes.map(i => currentQuiz[i]);
+
+  answers = new Array(currentQuiz.length).fill(null).map(() => ({
+    result: null,
+    input: "",
+    marked: false
+  }));
+
   currentIndex = 0;
   isFinished = false;
 
@@ -241,24 +280,3 @@ function hideButtons() {
   document.getElementById("retry-wrong-btn").style.display = "none";
   document.getElementById("restart-btn").style.display = "none";
 }
-
-/* 起動 */
-window.addEventListener("DOMContentLoaded", () => {
-  init();
-
-  const answerInput = document.getElementById("answer");
-
-  // Enterキー送信
-  answerInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      submitAnswer();
-    }
-  });
-
-  answerInput.addEventListener("input", function(e) {
-    if (!answers[currentIndex]) return;
-
-    answers[currentIndex].input = e.target.value;
-  });
-});

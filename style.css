@@ -77,6 +77,7 @@ button {
 }
 
 /* 状態色 */
+.answered { background: #90ee90; /* 薄い緑 */ }
 .correct { background: green; color: white; }
 .wrong { background: red; color: white; }
 .unanswered { background: white; }
